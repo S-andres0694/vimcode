@@ -5,11 +5,11 @@
 Set up a distribution and release workflow for vimcode: semver versioning, a changelog, and a CONTRIBUTING.md that explains how releases work. Users should be able to install vimcode as an npm package and track what changed between versions.
 
 ## Definition of Done
-- [ ] `CHANGELOG.md` exists with a v0.1.0 entry covering everything built so far
-- [ ] `CONTRIBUTING.md` exists explaining the release process (bump version, update changelog, npm publish)
-- [ ] `package.json` updated: version bumped to 0.1.0, `private: true` removed (or kept if not publishing to npm yet — decide)
-- [ ] `package.json` has `files` field to control what gets published (src/, not test/)
-- [ ] Clear decision documented: npm publish vs git-based install vs both
+- [x] `CHANGELOG.md` exists with a v0.1.0 entry covering everything built so far
+- [x] `CONTRIBUTING.md` exists explaining the release process (bump version, update changelog, git tag)
+- [x] `package.json` updated: version bumped to 0.1.0, `private: true` kept (git-based install only)
+- [x] `package.json` has `files` field to control what gets published (src/, not test/)
+- [x] Clear decision documented: git-based install via tui.json (documented in CONTRIBUTING.md)
 
 ## Task Priority
 1. `changelog.md` — define what v0.1.0 includes

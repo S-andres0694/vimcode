@@ -10,11 +10,11 @@ Create the initial CHANGELOG.md covering everything built in v0.1.0.
 - `git log` for commit history
 
 ## Acceptance Criteria
-- [ ] `CHANGELOG.md` exists at project root
-- [ ] Uses keep-a-changelog format (## [0.1.0] header, ### Added section)
-- [ ] Lists all features: modal editing, motions, operators (d/c/y), counts, yy/p, insert entries, mode indicator, extra keys (:, X, J)
-- [ ] Lists insert-mode behavior (Enter = newline, Tab blocked, Escape switches mode)
-- [ ] Notes known limitations
+- [x] `CHANGELOG.md` exists at project root
+- [x] Uses keep-a-changelog format (## [0.1.0] header, ### Added section)
+- [x] Lists all features: modal editing, motions, operators (d/c/y), counts, yy/p, insert entries, mode indicator, extra keys (:, X, J)
+- [x] Lists insert-mode behavior (Enter = newline, Tab inserts tab, Escape switches mode)
+- [x] Notes known limitations
 
 ## Verification
 - File exists and is valid markdown

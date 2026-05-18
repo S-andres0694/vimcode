@@ -12,13 +12,13 @@ Update package.json for distribution. Users need to install vimcode either from 
 - `package.json`
 
 ## Acceptance Criteria
-- [ ] Version bumped to `0.1.0`
-- [ ] Decision made and documented: keep `private: true` (git install only) or remove it (npm publish)
-- [ ] `files` field added to control what's published: `["src/"]` (exclude test/, docs/, dev-tui.json)
-- [ ] `description` field added
-- [ ] `repository` field added pointing to the GitHub repo
-- [ ] `license` field added (MIT or whatever the author chooses)
-- [ ] `keywords` field added for npm discoverability (if publishing)
+- [x] Version bumped to `0.1.0`
+- [x] Decision made and documented: keep `private: true` (git install only) — documented in CONTRIBUTING.md
+- [x] `files` field added to control what's published: `["src/"]` (exclude test/, docs/, dev-tui.json)
+- [x] `description` field added
+- [x] `repository` field added pointing to the GitHub repo
+- [x] `license` field added (MIT)
+- [x] `keywords` field added for npm discoverability
 
 ## Verification
 - `npm pack --dry-run` shows only intended files

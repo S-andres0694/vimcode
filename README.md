@@ -1,14 +1,16 @@
 # vimcode
 
-Vim-style modal editing for the [OpenCode](https://opencode.ai) prompt. Still early -- things may break or change.
+Vim keybindings for the [OpenCode](https://opencode.ai) prompt. Early beta, things will break.
 
 ## What it does
 
-Adds normal/insert mode to OpenCode's prompt textarea. Escape switches to normal mode, `i` goes back to insert. The mode shows in the prompt bar.
+Adds normal/insert mode to OpenCode's prompt input. Escape goes to normal mode, `i` goes back to insert. The current mode shows in the prompt bar.
 
-In insert mode, typing works normally except: Enter inserts a newline (Ctrl+Enter submits), Tab is blocked (no accidental agent cycling), and Escape switches to normal.
+In insert mode, typing works as usual. Enter inserts a newline (Ctrl+Enter submits), Tab inserts a tab character, and Escape switches to normal.
 
-In normal mode, keys are vim commands. Unrecognized keys are swallowed so you don't accidentally type into the prompt.
+Tab is a hack: the plugin API can't insert text at the cursor, so vimcode saves your clipboard, writes a tab to it, pastes, then restores your clipboard about 50ms later. Works fine but your clipboard briefly contains a tab character.
+
+In normal mode, keys are vim commands. Unrecognized keys get swallowed so you don't type into the prompt by accident.
 
 ## Install
 
@@ -16,15 +18,7 @@ Add to your `tui.json` (or `.opencode/tui.json`):
 
 ```json
 {
-  "plugin": ["vimcode"]
-}
-```
-
-Or from a local clone:
-
-```json
-{
-  "plugin": ["../path/to/vimcode"]
+  "plugin": ["vimcode@git+https://github.com/oribarilan/vimcode.git"]
 }
 ```
 
@@ -32,8 +26,8 @@ Or from a local clone:
 
 ### Motions
 
-| Key | What it does |
-|-----|-------------|
+| Key | Action |
+|-----|--------|
 | `h` `j` `k` `l` | Left, down, up, right |
 | `w` `b` `e` | Word forward, backward, forward |
 | `0` `^` | Line start |
@@ -41,12 +35,12 @@ Or from a local clone:
 | `g` | Buffer start (should be `gg`, see below) |
 | `G` | Buffer end |
 
-All motions accept counts: `3j` moves down 3 lines.
+All motions take counts: `3j` moves down 3 lines.
 
 ### Operators
 
-| Combo | What it does |
-|-------|-------------|
+| Combo | Action |
+|-------|--------|
 | `dd` | Delete line |
 | `dw` `db` `d$` `d0` | Delete to word/line boundary |
 | `dj` `dk` | Delete current + lines below/above |
@@ -54,12 +48,12 @@ All motions accept counts: `3j` moves down 3 lines.
 | `cc` `cw` `cb` `c$` `c0` `C` | Same as d-equivalents, then insert mode |
 | `yy` | Yank (copy) current line |
 
-Operators take counts too: `2dd` deletes 2 lines, `d3w` deletes 3 words.
+Counts work here too: `2dd` deletes 2 lines, `d3w` deletes 3 words.
 
 ### Insert entries
 
-| Key | What it does |
-|-----|-------------|
+| Key | Action |
+|-----|--------|
 | `i` | Insert at cursor |
 | `a` | Insert after cursor |
 | `A` | Insert at end of line |
@@ -68,8 +62,8 @@ Operators take counts too: `2dd` deletes 2 lines, `d3w` deletes 3 words.
 
 ### Other
 
-| Key | What it does |
-|-----|-------------|
+| Key | Action |
+|-----|--------|
 | `x` | Delete character |
 | `u` | Undo |
 | `Ctrl+r` | Redo |
@@ -80,29 +74,30 @@ Operators take counts too: `2dd` deletes 2 lines, `d3w` deletes 3 words.
 | `Enter` | Submit prompt (normal mode) |
 | `Escape` | Pass through for double-escape interrupt |
 
-## What doesn't work (yet)
+## What doesn't work (yet?)
 
-- **Visual mode** (v, V, Ctrl+v) -- no selection API in the plugin system
-- **Text objects** (ciw, di", etc.) -- needs cursor position, which plugins can't read
-- **`gg`** -- single `g` jumps to buffer start immediately instead of waiting for a second `g`
-- **`r` (replace char)** -- can't insert a specific character through the command API
-- **`yw`, `y$`, etc.** -- only `yy` works; word/line yank needs cursor position tracking
-- **Cursor shape** -- no way to show a block cursor in normal mode
-- **`yy` accuracy** -- the plugin tracks line position with a shadow counter that can drift if you click or use arrow keys
+- `v`, `V`, `Ctrl+v` (visual mode) -- the plugin system has no selection API
+- `ciw`, `di"`, etc. (text objects) -- plugins can't read cursor position
+- `gg` -- single `g` jumps to buffer start right away, doesn't wait for a second keypress
+- `r` (replace char) -- no way to insert a specific character through the command API
+- `yw`, `y$`, etc. -- only `yy` works; the rest need cursor position tracking
+- Cursor shape -- no way to show a block cursor in normal mode
+- `yy` accuracy -- line position is tracked with a shadow counter that drifts on clicks and arrow keys
 
 ## Escape behavior
 
-First Escape in insert mode switches to normal -- it does NOT start the double-escape-to-cancel sequence. You need 3 escapes from insert mode to cancel a running response: one for normal mode, two more for the interrupt.
+First Escape in insert mode switches to normal. It doesn't trigger the double-escape interrupt. From insert mode you need 3 escapes to cancel a running response: one to enter normal, two more for the interrupt.
 
-## Development
+## How it works
 
-```bash
-npm install          # install deps
-just dev             # launch OpenCode with the plugin loaded
-bun test             # run tests
-```
+vimcode is a [TUI plugin](https://opencode.ai/docs/plugins/) built on OpenCode's `@opentui` stack. It registers a key intercept that captures every keypress in the prompt. A pure handler in `src/vim.ts` decides what to do based on the current mode and key — it returns a list of actions (move cursor, delete word, switch mode, etc.) without touching the API directly. The plugin entry in `src/index.tsx` dispatches those actions through `@opentui/keymap` commands and wires a mode indicator into the prompt bar.
 
-`just dev` uses `OPENCODE_TUI_CONFIG=dev-tui.json` to load the plugin. Running `opencode` normally in this directory doesn't load it.
+## Contributing
+
+1. Try it
+2. Star it
+3. Open issues for bugs or missing keybindings
+4. PRs are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) for dev setup, how to add keybindings, and the release process.
 
 ## License
 
