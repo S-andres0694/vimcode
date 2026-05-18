@@ -3,7 +3,10 @@ import { createSignal } from "solid-js"
 import type { TuiPluginModule } from "@opencode-ai/plugin/tui"
 
 type Mode = "normal" | "insert"
+type Operator = "d" | "c" | "y" | null
 
+// Motions that work standalone and as targets for operators.
+// Value is the command to dispatch (repeated by count).
 const MOTIONS: Record<string, string> = {
   h: "input.move.left",
   l: "input.move.right",
@@ -11,14 +14,24 @@ const MOTIONS: Record<string, string> = {
   k: "input.move.up",
   w: "input.word.forward",
   b: "input.word.backward",
+  e: "input.word.forward",
   "0": "input.line.home",
+  "^": "input.line.home",
   $: "input.line.end",
   G: "input.buffer.end",
 }
 
-const EDITS: Record<string, string> = {
-  x: "input.delete",
-  u: "input.undo",
+// Maps operator + motion-key to a delete command.
+// `c` uses the same commands then enters insert mode.
+const DELETE_MOTION: Record<string, string> = {
+  w: "input.delete.word.forward",
+  b: "input.delete.word.backward",
+  e: "input.delete.word.forward",
+  $: "input.delete.to.line.end",
+  "0": "input.delete.to.line.start",
+  "^": "input.delete.to.line.start",
+  h: "input.backspace",
+  l: "input.delete",
 }
 
 const plugin: TuiPluginModule = {
@@ -26,17 +39,73 @@ const plugin: TuiPluginModule = {
   tui: async (api) => {
     const [mode, setMode] = createSignal<Mode>("insert")
 
+    let pendingOp: Operator = null
+    let count = 0
+    let lineTracker = 0  // shadow line position for yy
+    let yankRegister = ""
+
     function dispatch(cmd: string) {
       setTimeout(() => api.keymap.dispatchCommand(cmd), 0)
     }
 
+    function dispatchN(cmd: string, n: number) {
+      for (let i = 0; i < n; i++) dispatch(cmd)
+    }
+
+    function consumeCount(): number {
+      const n = count || 1
+      count = 0
+      return n
+    }
+
+    function resetPending() {
+      pendingOp = null
+      count = 0
+    }
+
     function enterInsert() {
+      resetPending()
       setMode("insert")
     }
 
+    function updateLineTracker(key: string, n: number) {
+      if (key === "j") lineTracker += n
+      else if (key === "k") lineTracker = Math.max(0, lineTracker - n)
+      else if (key === "G") lineTracker = getLineCount() - 1
+      else if (key === "g") lineTracker = 0
+    }
+
+    function getPromptText(): string {
+      return api.prompt?.current?.input ?? ""
+    }
+
+    function getLineCount(): number {
+      return getPromptText().split("\n").length
+    }
+
+    function getLine(n: number): string {
+      return getPromptText().split("\n")[n] ?? ""
+    }
+
+    function copyToClipboard(text: string) {
+      try {
+        const proc = globalThis.Bun
+          ? globalThis.Bun.spawn(["pbcopy"], { stdin: "pipe" })
+          : null
+        if (proc) {
+          proc.stdin.write(text)
+          proc.stdin.end()
+        }
+      } catch {
+        // Fallback: try child_process
+        try {
+          require("child_process").execSync("pbcopy", { input: text })
+        } catch { /* clipboard unavailable */ }
+      }
+      yankRegister = text
+    }
+
     // ── Key intercept ───────────────────────────────────────────
-    // Single intercept handles both escape (insert→normal) and
-    // all normal-mode keys. Runs before any layer.
     api.keymap.intercept(
       "key",
       (ctx) => {
@@ -44,37 +113,30 @@ const plugin: TuiPluginModule = {
         const ev = ctx.event
         const name: string = ev.name
 
-        // ── Escape: insert → normal ──
-        if (name === "escape" && mode() === "insert") {
-          ctx.consume()
-          setMode("normal")
+        // ── Insert-mode overrides ──
+        if (mode() === "insert") {
+          if (name === "escape") {
+            ctx.consume()
+            lineTracker = 0
+            setMode("normal")
+            return
+          }
+          if (name === "return" && !ev.ctrl) {
+            ctx.consume()
+            dispatch("input.newline")
+            return
+          }
+          if (name === "tab") {
+            ctx.consume()
+            return
+          }
           return
         }
 
-        // ── Enter in insert mode: newline, not submit ──
-        // Ctrl+Enter submits from any mode.
-        if (name === "return" && mode() === "insert") {
-          if (ev.ctrl) return // let ctrl+enter fall through to submit
-          ctx.consume()
-          dispatch("input.newline")
-          return
-        }
-
-        // ── Tab in insert mode: block agent cycling ──
-        // In normal mode, tab falls through to cycle agents as usual.
-        if (name === "tab" && mode() === "insert") {
-          ctx.consume()
-          return
-        }
-
-        // Everything below is normal-mode only
-        if (mode() !== "normal") return
-
-        // Let meta/super pass through
+        // ── Normal mode ──
         if (ev.meta || ev.super) return
-        // Let most ctrl combos pass through (except vim ones)
         if (ev.ctrl) {
-          if (name === "r") { ctx.consume(); dispatch("input.redo"); return }
+          if (name === "r") { ctx.consume(); dispatch("input.redo"); resetPending(); return }
           return
         }
 
@@ -86,68 +148,146 @@ const plugin: TuiPluginModule = {
           else if (name === "6") key = "^"
         }
 
-        // ── Submit: Enter in normal mode ──
-        if (name === "return") {
-          ctx.consume()
-          dispatch("input.submit")
+        // Let escape pass through for double-escape interrupt
+        if (name === "escape") {
+          resetPending()
           return
         }
 
-        // In normal mode, let escape pass through to OpenCode's
-        // double-escape session_interrupt handler.
-        if (name === "escape") return
+        ctx.consume()
 
-        // ── Motions ──
+        // ── Digits: accumulate count ──
+        if (/[1-9]/.test(key) || (key === "0" && count > 0)) {
+          count = count * 10 + parseInt(key)
+          return
+        }
+
+        // ── Submit: Enter ──
+        if (name === "return") { dispatch("input.submit"); resetPending(); return }
+
+        // ── Command palette ──
+        if (key === ":") { dispatch("command.palette.show"); resetPending(); return }
+
+        // ── Paste ──
+        if (key === "p") {
+          if (yankRegister) copyToClipboard(yankRegister)
+          dispatch("prompt.paste")
+          resetPending()
+          return
+        }
+
+        // ── Backspace (X) ──
+        if (key === "X") { dispatchN("input.backspace", consumeCount()); return }
+
+        // ── Join lines (J) ──
+        if (key === "J") {
+          const n = consumeCount()
+          for (let i = 0; i < n; i++) {
+            dispatch("input.line.end")
+            dispatch("input.delete")
+          }
+          return
+        }
+
+        // ── Operators: d, c, y ──
+        if (key === "d" || key === "c" || key === "y") {
+          if (pendingOp === key) {
+            // Doubled: dd, cc, yy — operate on line(s)
+            const n = consumeCount()
+            if (key === "y") {
+              const lines: string[] = []
+              for (let i = 0; i < n; i++) {
+                lines.push(getLine(lineTracker + i))
+              }
+              copyToClipboard(lines.join("\n") + "\n")
+              api.ui?.toast?.({ message: `${n} line${n > 1 ? "s" : ""} yanked`, variant: "info", duration: 1000 })
+            } else {
+              dispatchN("input.delete.line", n)
+              if (key === "c") enterInsert()
+            }
+            pendingOp = null
+            return
+          }
+          pendingOp = key
+          return
+        }
+
+        // ── D / C shortcuts ──
+        if (key === "D") { dispatch("input.delete.to.line.end"); resetPending(); return }
+        if (key === "C") { dispatch("input.delete.to.line.end"); enterInsert(); return }
+
+        // ── Pending operator + motion ──
+        if (pendingOp && key in MOTIONS) {
+          const n = consumeCount()
+
+          if (pendingOp === "y") {
+            // Yank: only yy is reliable (handled above). Other motions: toast a hint.
+            api.ui?.toast?.({ message: "Only yy supported for now", variant: "info", duration: 1500 })
+            resetPending()
+            return
+          }
+
+          // d/c + j/k: delete lines
+          if (key === "j") {
+            dispatchN("input.delete.line", n + 1)
+            if (pendingOp === "c") enterInsert()
+            else resetPending()
+            return
+          }
+          if (key === "k") {
+            dispatchN("input.move.up", n)
+            dispatchN("input.delete.line", n + 1)
+            if (pendingOp === "c") enterInsert()
+            else resetPending()
+            return
+          }
+
+          // d/c + word/line motions
+          const deleteCmd = DELETE_MOTION[key]
+          if (deleteCmd) {
+            dispatchN(deleteCmd, n)
+            if (pendingOp === "c") enterInsert()
+            else resetPending()
+            return
+          }
+
+          // Motion has no delete equivalent (G, gg) — just reset
+          resetPending()
+          return
+        }
+
+        // ── Standalone motions ──
         if (key in MOTIONS) {
-          ctx.consume()
-          dispatch(MOTIONS[key])
+          const n = consumeCount()
+          dispatchN(MOTIONS[key], n)
+          updateLineTracker(key, n)
           return
         }
 
         // ── gg (buffer home) ──
         if (key === "g") {
-          // Can't do sequences in an intercept, so just dispatch buffer.home.
-          // A real gg would need state tracking; for now single g = go top.
-          ctx.consume()
           dispatch("input.buffer.home")
+          lineTracker = 0
+          resetPending()
           return
         }
 
         // ── Edits ──
-        if (key in EDITS) {
-          ctx.consume()
-          dispatch(EDITS[key])
-          return
-        }
-
-        // ── dd (delete line) ──
-        // Same sequence caveat as gg — single d deletes line for now
-        if (key === "d") {
-          ctx.consume()
-          dispatch("input.delete.line")
-          return
-        }
-
-        // ── D (delete to end of line) ──
-        if (key === "D") {
-          ctx.consume()
-          dispatch("input.delete.to.line.end")
-          return
-        }
+        if (key === "x") { dispatchN("input.delete", consumeCount()); return }
+        if (key === "u") { dispatch("input.undo"); resetPending(); return }
 
         // ── Insert entries ──
-        if (key === "i") { ctx.consume(); enterInsert(); return }
-        if (key === "a") { ctx.consume(); dispatch("input.move.right"); enterInsert(); return }
-        if (key === "A") { ctx.consume(); dispatch("input.line.end"); enterInsert(); return }
+        if (key === "i") { enterInsert(); return }
+        if (key === "a") { dispatch("input.move.right"); enterInsert(); return }
+        if (key === "A") { dispatch("input.line.end"); enterInsert(); return }
         if (key === "o") {
-          ctx.consume()
           dispatch("input.line.end")
           dispatch("input.newline")
+          lineTracker++
           enterInsert()
           return
         }
         if (key === "O") {
-          ctx.consume()
           dispatch("input.line.home")
           dispatch("input.newline")
           dispatch("input.move.up")
@@ -155,8 +295,7 @@ const plugin: TuiPluginModule = {
           return
         }
 
-        // ── Unbound key — consume to prevent insertion ──
-        ctx.consume()
+        // Unbound — already consumed above
       },
       { priority: 10_000 },
     )

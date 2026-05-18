@@ -6,7 +6,7 @@ install:
 
 # Launch OpenCode with the vimcode plugin active
 dev:
-    opencode
+    OPENCODE_TUI_CONFIG=dev-tui.json opencode
 
 # Interactive terminal sandbox for the @vimee/core engine.
 # Play with vim motions, operators, text objects — no OpenCode needed.
