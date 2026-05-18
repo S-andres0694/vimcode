@@ -85,10 +85,10 @@ describe("handleInsertKey", () => {
     expect(r.consume).toBe(false)
   })
 
-  it("tab → consume, empty actions", () => {
+  it("tab → insert action with tab character", () => {
     const r = handleInsertKey(state, "tab", ev("tab"))
     expect(r.consume).toBe(true)
-    expect(r.actions).toHaveLength(0)
+    expect(r.actions).toEqual([{ type: "insert", text: "\t" }])
   })
 
   it("regular key → passthrough", () => {

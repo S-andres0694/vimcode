@@ -6,6 +6,7 @@ export type Action =
   | { type: "mode"; mode: Mode }
   | { type: "toast"; message: string; duration?: number }
   | { type: "yank"; text: string }
+  | { type: "insert"; text: string }
 
 export type HandlerResult = {
   consume: boolean
@@ -85,7 +86,9 @@ export function handleInsertKey(state: VimState, key: string, ev: KeyEvent): Han
   if (ev.name === "return" && !ev.ctrl) {
     return { consume: true, actions: [{ type: "cmd", cmd: "input.newline" }] }
   }
-  if (ev.name === "tab") return CONSUME
+  if (ev.name === "tab") {
+    return { consume: true, actions: [{ type: "insert", text: "\t" }] }
+  }
   return PASS
 }
 

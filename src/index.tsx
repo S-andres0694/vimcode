@@ -2,7 +2,7 @@
 import { createSignal } from "solid-js"
 import type { TuiPluginModule } from "@opencode-ai/plugin/tui"
 import { createVimState, translateKey, handleInsertKey, handleNormalKey, type Action, type Mode } from "./vim"
-import { writeClipboard } from "./clipboard"
+import { writeClipboard, readClipboard } from "./clipboard"
 import { ModeIndicator } from "./indicator"
 
 const plugin: TuiPluginModule = {
@@ -30,6 +30,16 @@ const plugin: TuiPluginModule = {
             break
           case "yank":
             writeClipboard(action.text)
+            break
+          case "insert":
+            // Save clipboard, write insert text, paste, restore original clipboard
+            readClipboard().then((saved) => {
+              writeClipboard(action.text)
+              setTimeout(() => {
+                api.keymap.dispatchCommand("prompt.paste")
+                setTimeout(() => writeClipboard(saved), 50)
+              }, 0)
+            })
             break
         }
       }
