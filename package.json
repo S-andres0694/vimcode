@@ -7,15 +7,15 @@
     ".": "./src/index.tsx",
     "./tui": "./src/index.tsx"
   },
-  "dependencies": {
-    "@vimee/core": "^0.3.0"
-  },
   "peerDependencies": {
     "@opencode-ai/plugin": "*",
     "@opentui/core": "*",
     "@opentui/keymap": "*",
     "@opentui/solid": "*",
     "solid-js": "*"
+  },
+  "scripts": {
+    "test": "bun test"
   },
   "devDependencies": {
     "tsx": "^4.22.1"
