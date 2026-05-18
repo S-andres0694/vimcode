@@ -1,0 +1,23 @@
+{
+  "name": "vimcode",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.tsx",
+    "./tui": "./src/index.tsx"
+  },
+  "dependencies": {
+    "@vimee/core": "^0.3.0"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": "*",
+    "@opentui/core": "*",
+    "@opentui/keymap": "*",
+    "@opentui/solid": "*",
+    "solid-js": "*"
+  },
+  "devDependencies": {
+    "tsx": "^4.22.1"
+  }
+}
