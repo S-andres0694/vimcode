@@ -1,6 +1,7 @@
 /** @jsxImportSource @opentui/solid */
 import { createSignal } from "solid-js"
 import type { TuiPluginModule } from "@opencode-ai/plugin/tui"
+import { ModeIndicator } from "./indicator"
 
 type Mode = "normal" | "insert"
 type Operator = "d" | "c" | "y" | null
@@ -301,18 +302,7 @@ const plugin: TuiPluginModule = {
     )
 
     // ── Mode indicator ──────────────────────────────────────────
-    const indicator = () => {
-      const m = mode()
-      const label = m === "normal" ? "NORMAL" : "INSERT"
-      const color = m === "normal"
-        ? api.theme.current.warning
-        : api.theme.current.success
-      return (
-        <box paddingLeft={1} paddingRight={1}>
-          <text fg={color} bold>{label}</text>
-        </box>
-      )
-    }
+    const indicator = () => <ModeIndicator mode={mode()} theme={api.theme} />
 
     api.slots.register({
       slots: {
