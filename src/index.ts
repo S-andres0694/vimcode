@@ -1,5 +1,5 @@
-/** @jsxImportSource @opentui/solid */
 import { createSignal } from "solid-js"
+import { createComponent } from "@opentui/solid"
 import type { TuiPluginModule } from "@opencode-ai/plugin/tui"
 import { createVimState, translateKey, handleInsertKey, handleNormalKey, type Action, type Mode } from "./vim"
 import { writeClipboard, readClipboard } from "./clipboard"
@@ -59,7 +59,10 @@ const plugin: TuiPluginModule = {
       { priority: 10_000 },
     )
 
-    const indicator = () => <ModeIndicator mode={mode()} theme={api.theme} />
+    const indicator = () => createComponent(ModeIndicator, {
+      get mode() { return mode() },
+      get theme() { return api.theme },
+    })
     api.slots.register({
       slots: {
         session_prompt_right: indicator,

@@ -16,20 +16,20 @@ vimcode is a TUI plugin for [OpenCode](https://opencode.ai). Before working on i
 
 **Gotchas we hit during development:**
 - TUI plugins go in `tui.json`, not `opencode.json`. The config field is `"plugin"`.
-- The plugin `package.json` needs `exports: { "./tui": "./src/index.tsx" }` — the loader checks `./tui`, not `.`.
+- The plugin `package.json` needs `exports: { "./tui": "./src/index.ts" }` — the loader checks `./tui`, not `.`.
 - `dispatchCommand()` from inside a `key:before` intercept doesn't work for cursor movement. Wrap in `setTimeout(..., 0)` to break out of the intercept stack.
 - `registerLayer` with `activeWhen` using SolidJS signals requires `reactiveMatcherFromSignal` from `@opentui/keymap/solid`. Plain `() => signal()` doesn't trigger re-evaluation. We chose intercepts instead of layers to avoid this.
 - The plugin API exposes no cursor position. `api.prompt.current.input` gives text content only. No `setCursor`, no `getSelection`. This limits what vim operations we can implement.
-- `api.prompt.set()` always moves cursor to buffer end. No way to position it.
+- **No JSX in plugin source.** OpenCode's Bun solid transform plugin (`onLoad` for `.tsx`) doesn't intercept files loaded from the `~/.cache/opencode/packages/` path used for git-installed plugins. The `@jsxImportSource` pragma causes Bun to resolve `@opentui/solid/jsx-dev-runtime` natively, which fails because that subpath only exports type declarations. Use programmatic rendering (`createElement`, `createComponent`, `insert`, `setProp`, `effect` from `@opentui/solid`) instead of JSX. The runtime module plugin handles bare `@opentui/solid` imports via `onResolve`.
 
 ## Architecture
 
 ```
 src/
-  index.tsx      (62 lines)   Plugin entry: intercept registration, action application, slot wiring
+  index.ts       (72 lines)   Plugin entry: intercept registration, action application, slot wiring
   vim.ts         (316 lines)  Pure vim engine: state, handlers, command tables, types
   clipboard.ts   (11 lines)   writeClipboard() via pbcopy — platform I/O only
-  indicator.tsx  (16 lines)   ModeIndicator component — JSX only
+  indicator.ts   (21 lines)   ModeIndicator component — programmatic rendering
 test/
   vim.test.ts    (396 lines)  Characterization tests for all key handling branches
 ```
@@ -38,11 +38,11 @@ test/
 ```
 KeyEvent → translateKey() → handleInsertKey/handleNormalKey() → HandlerResult { consume, actions[] }
                                     ↓                                          ↓
-                             mutates VimState                        applyActions() in index.tsx
+                             mutates VimState                        applyActions() in index.ts
                           (count, pendingOp, mode)                   dispatches commands via setTimeout
 ```
 
-Handlers in `vim.ts` are pure — they take state + key + event, mutate state, return actions. They never touch `api`. The only file that calls `api.keymap.dispatchCommand` is `index.tsx`.
+Handlers in `vim.ts` are pure — they take state + key + event, mutate state, return actions. They never touch `api`. The only file that calls `api.keymap.dispatchCommand` is `index.ts`.
 
 **Action types:**
 - `{ type: "cmd", cmd: string }` — dispatched via `setTimeout(() => api.keymap.dispatchCommand(cmd), 0)`
@@ -99,7 +99,7 @@ The `dev-tui.json` config is picked up only by `just dev`. Running `opencode` no
 
 **No classes.** Use plain objects for state (`VimState`), plain functions for behavior. Pass state by reference, mutate it directly. Return results as data.
 
-**Single responsibility per file.** `vim.ts` owns all key handling logic and state transitions. `index.tsx` owns all OpenCode API interaction. `clipboard.ts` owns platform I/O. `indicator.tsx` owns JSX. Don't mix these concerns.
+**Single responsibility per file.** `vim.ts` owns all key handling logic and state transitions. `index.ts` owns all OpenCode API interaction. `clipboard.ts` owns platform I/O. `indicator.ts` owns the mode indicator rendering. Don't mix these concerns.
 
 **Comments explain why, not what.** The code should read clearly without narration. Reserve comments for non-obvious decisions (like why `setTimeout` is needed for dispatch, or why `g` doesn't wait for a second keypress).
 
@@ -111,4 +111,4 @@ The `dev-tui.json` config is picked up only by `just dev`. Running `opencode` no
 
 **Shifted key translation** happens in `translateKey()` before the handler sees the key. Handlers work with normalized keys (`$` not `shift+4`, `G` not `shift+g`). Add new shift mappings in `translateKey`, not in handlers.
 
-**TypeScript strictness.** `strict: true` in tsconfig. No `any` in `vim.ts` or `test/`. The `api` parameter in `index.tsx` is typed as `any` because the plugin types come from peer deps that may not be installed locally — that's the one acceptable use.
+**TypeScript strictness.** `strict: true` in tsconfig. No `any` in `vim.ts` or `test/`. The `api` parameter in `index.ts` is typed as `any` because the plugin types come from peer deps that may not be installed locally — that's the one acceptable use.

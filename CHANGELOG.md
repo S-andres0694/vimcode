@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] — 2026-05-19
+
+### Fixed
+
+- Git URL installation now works. Replaced JSX with programmatic rendering (`createElement`, `createComponent` from `@opentui/solid`) to avoid the `jsx-dev-runtime` resolution failure. OpenCode's Bun solid transform plugin doesn't intercept `.tsx` files loaded from the package cache path; bare `@opentui/solid` imports resolve correctly via the runtime module plugin.
+
 ## [0.1.1] — 2026-05-19
 
 ### Fixed
@@ -40,6 +46,7 @@ First release. Brings modal editing to the OpenCode prompt — normal mode, inse
 
 > **Known limitations:** this is a v0 release. `g` fires immediately as buffer-home instead of waiting for `gg`. The line tracker used by `yy` drifts when the cursor moves via clicks or arrow keys. Visual mode and text objects aren't feasible without cursor position access from the plugin API.
 
-[Unreleased]: https://github.com/oribarilan/vimcode/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/oribarilan/vimcode/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/oribarilan/vimcode/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/oribarilan/vimcode/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/oribarilan/vimcode/releases/tag/v0.1.0
