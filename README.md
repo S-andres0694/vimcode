@@ -12,6 +12,14 @@ Tab is a hack: the plugin API can't insert text at the cursor, so vimcode saves 
 
 In normal mode, keys are vim commands. Unrecognized keys get swallowed so you don't type into the prompt by accident. Pressing `:` opens the command palette, just like vim's command mode.
 
+## Current gaps
+
+**No persistent mode indicator.** Mode switches show a brief toast ("NORMAL" / "INSERT") that fades after about a second. There's no always-visible indicator in distributed installs. When running from source (`just dev`), a colored label appears in the prompt bar, but distributed plugins can't import the host's SolidJS runtime to render slot UI — an upstream limitation affecting all externally installed TUI plugins.
+
+**No cursor shape change.** The cursor stays a line in both modes instead of switching to a block in normal mode. opentui's renderer supports `setCursorStyle`, and `api.renderer` is exposed to plugins, so this should be fixable — just not implemented yet.
+
+**No visual mode.** `v`, `V`, and `Ctrl+v` don't work. The plugin API doesn't expose cursor position or text selection, so there's no way to highlight a range or operate on a selection.
+
 ## Install
 
 Add to your `tui.json` (or `.opencode/tui.json`):
@@ -79,21 +87,15 @@ Counts work here too: `2dd` deletes 2 lines, `d3w` deletes 3 words.
 
 ## What doesn't work (yet?)
 
-- `v`, `V`, `Ctrl+v` (visual mode) -- the plugin system has no selection API
-- `ciw`, `di"`, etc. (text objects) -- plugins can't read cursor position
-- `gg` -- single `g` jumps to buffer start right away, doesn't wait for a second keypress
-- `r` (replace char) -- no way to insert a specific character through the command API
-- `yw`, `y$`, etc. -- only `yy` works; the rest need cursor position tracking
-- Cursor shape -- no way to show a block cursor in normal mode
-- `yy` accuracy -- line position is tracked with a shadow counter that drifts on clicks and arrow keys
+- `ciw`, `di"`, etc. (text objects) — plugins can't read cursor position
+- `gg` — single `g` jumps to buffer start right away, doesn't wait for a second keypress
+- `r` (replace char) — no way to insert a specific character through the command API
+- `yw`, `y$`, etc. — only `yy` works; the rest need cursor position tracking
+- `yy` accuracy — line position is tracked with a shadow counter that drifts on clicks and arrow keys
 
 ## Overlay passthrough
 
 Vimcode temporarily disables itself whenever OpenCode shows its own interactive UI. This includes the command palette (`:` or Ctrl+P), slash commands like `/sessions`, the `@` file/agent picker, question prompts (when the AI asks you to choose), and permission prompts. While any of these are open, all keys pass straight through so j/k/Enter/Escape work as you'd expect. Vimcode resumes once the overlay closes.
-
-## Known limitation: mode indicator in distributed installs
-
-OpenCode's TUI plugin system doesn't resolve host packages (`solid-js`, `@opentui/solid`) for externally installed plugins. vimcode uses dynamic `import()` with a fallback: when running from source (`just dev`), the colored mode indicator appears in the prompt bar. When installed via git or npm, imports fail silently and mode switches show a brief toast instead. This is an upstream limitation that affects all TUI plugins distributed via git or npm.
 
 ## Escape behavior
 
