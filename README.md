@@ -4,21 +4,21 @@ Vim keybindings for the [OpenCode](https://opencode.ai) prompt. Early beta, thin
 
 ## What it does
 
-Adds normal/insert mode to OpenCode's prompt input. Escape goes to normal mode, `i` goes back to insert. Mode switches show a brief toast notification.
+Adds normal/insert mode to OpenCode's prompt input. Escape switches to normal mode, `i` goes back to insert. You get a brief toast on each switch.
 
-In insert mode, typing works as usual. Enter inserts a newline (Ctrl+Enter submits), Tab inserts a tab character, and Escape switches to normal. File picker and autocomplete work naturally: Enter picks the selected item and Escape closes the picker without leaving insert mode.
+In insert mode, typing works normally. Enter adds a newline, Ctrl+Enter submits, Tab inserts a tab, Escape switches to normal. The file picker and autocomplete aren't affected: Enter picks the selected item and Escape closes the picker without leaving insert.
 
-Tab is a hack: the plugin API can't insert text at the cursor, so vimcode saves your clipboard, writes a tab to it, pastes, then restores your clipboard about 50ms later. Works fine but your clipboard briefly contains a tab character.
+Tab works through a clipboard hack. The plugin API can't insert arbitrary text at the cursor, so vimcode briefly overwrites your clipboard with a tab character, pastes it, then restores the original clipboard ~50ms later.
 
-In normal mode, keys are vim commands. Unrecognized keys get swallowed so you don't type into the prompt by accident. Pressing `:` opens the command palette, just like vim's command mode.
+In normal mode, keys are vim commands. Unrecognized keys get swallowed so you don't accidentally type into the prompt. `:` opens the command palette.
 
 ## Current gaps
 
-**No persistent mode indicator.** Mode switches show a brief toast ("NORMAL" / "INSERT") that fades after about a second. There's no always-visible indicator because the plugin API can't render slot UI without importing the host's SolidJS runtime, which isn't available to externally installed plugins.
+**No persistent mode indicator.** You see a toast ("NORMAL" / "INSERT") on each switch, but it fades after about a second. A permanent indicator would need the host's SolidJS runtime, which isn't available to externally installed plugins.
 
-**No cursor shape change.** The cursor stays a line in both modes instead of switching to a block in normal mode. opentui's renderer supports `setCursorStyle`, and `api.renderer` is exposed to plugins, so this should be fixable — just not implemented yet.
+**No cursor shape change.** The cursor stays a line in both modes, no block cursor in normal mode. opentui's renderer has `setCursorStyle` and it's exposed to plugins, so this is probably fixable. Haven't gotten to it yet.
 
-**No visual mode.** `v`, `V`, and `Ctrl+v` don't work. The plugin API doesn't expose cursor position or text selection, so there's no way to highlight a range or operate on a selection.
+**No visual mode.** `v`, `V`, `Ctrl+v` do nothing. The plugin API doesn't expose cursor position or text selection, so there's no way to select a range.
 
 ## Install
 
@@ -45,7 +45,7 @@ Add to your `tui.json` (or `.opencode/tui.json`):
 
 All motions take counts: `3j` moves down 3 lines.
 
-When the input is empty, `j`/`k` scroll through prompt history instead of moving the cursor (same as the up/down arrows).
+When the input is empty, `j`/`k` scroll through prompt history instead of moving the cursor.
 
 ### Operators
 
@@ -58,7 +58,7 @@ When the input is empty, `j`/`k` scroll through prompt history instead of moving
 | `cc` `cw` `cb` `c$` `c0` `C` | Same as d-equivalents, then insert mode |
 | `yy` | Yank (copy) current line |
 
-Counts work here too: `2dd` deletes 2 lines, `d3w` deletes 3 words.
+Counts work too: `2dd` deletes 2 lines, `d3w` deletes 3 words.
 
 ### Insert entries
 
@@ -78,39 +78,39 @@ Counts work here too: `2dd` deletes 2 lines, `d3w` deletes 3 words.
 | `u` | Undo |
 | `Ctrl+r` | Redo |
 | `p` | Paste from yank register |
-| `:` | Open command palette |
+| `:` | Command palette |
 | `X` | Backspace |
 | `J` | Join current line with next |
 | `j` `k` | Cycle prompt history (when input is empty) |
 | `Enter` | Submit prompt |
 | `Escape` | Pass through for double-escape interrupt |
 
-## What doesn't work (yet?)
+## What doesn't work yet
 
-- `ciw`, `di"`, etc. (text objects) — plugins can't read cursor position
-- `gg` — single `g` jumps to buffer start right away, doesn't wait for a second keypress
-- `r` (replace char) — no way to insert a specific character through the command API
-- `yw`, `y$`, etc. — only `yy` works; the rest need cursor position tracking
-- `yy` accuracy — line position is tracked with a shadow counter that drifts on clicks and arrow keys
+- `ciw`, `di"`, etc. (text objects) -- no cursor position access in the plugin API
+- `gg` -- single `g` goes to buffer start immediately, doesn't wait for a second keypress
+- `r` (replace char) -- no way to insert a specific character through the API
+- `yw`, `y$`, etc. -- only `yy` works, the rest need cursor tracking
+- `yy` accuracy -- line position is tracked with a counter that drifts on clicks and arrow keys
 
 ## Overlay passthrough
 
-Vimcode temporarily disables itself whenever OpenCode shows its own interactive UI. This includes the command palette (`:` or Ctrl+P), slash commands like `/sessions`, the `@` file/agent picker, question prompts (when the AI asks you to choose), and permission prompts. While any of these are open, all keys pass straight through so j/k/Enter/Escape work as you'd expect. Vimcode resumes once the overlay closes.
+When OpenCode shows its own UI -- command palette, `/sessions`, the `@` file/agent picker, question prompts, permission prompts -- vimcode gets out of the way. All keys pass through to the overlay until it closes.
 
 ## Escape behavior
 
-First Escape in insert mode switches to normal. It doesn't trigger the double-escape interrupt. From insert mode you need 3 escapes to cancel a running response: one to enter normal, two more for the interrupt.
+First Escape in insert mode switches to normal. It won't trigger the double-escape interrupt. So from insert mode you need 3 escapes to cancel a running response: one for normal mode, two more for the interrupt.
 
 ## How it works
 
-vimcode is a [TUI plugin](https://opencode.ai/docs/plugins/) built on OpenCode's `@opentui` stack. It registers a key intercept that captures every keypress in the prompt. A pure handler in `src/vim.ts` decides what to do based on the current mode and key — it returns a list of actions (move cursor, delete word, switch mode, etc.) without touching the API directly. The plugin entry in `src/index.ts` dispatches those actions through `@opentui/keymap` commands and shows mode changes via toast notifications.
+vimcode is a [TUI plugin](https://opencode.ai/docs/plugins/) that registers a key intercept on every prompt keypress. A pure handler in `src/vim.ts` takes the current mode and key, returns a list of actions (move cursor, delete word, switch mode, etc.) without calling the API. `src/index.ts` dispatches those actions through `@opentui/keymap` commands.
 
 ## Contributing
 
 1. Try it
 2. Star it
 3. Open issues for bugs or missing keybindings
-4. PRs are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) for dev setup, how to add keybindings, and the release process.
+4. PRs welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) for dev setup and the release process.
 
 ## License
 
