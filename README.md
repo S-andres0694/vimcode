@@ -16,8 +16,6 @@ In normal mode, keys are vim commands. Unrecognized keys get swallowed so you do
 
 **No persistent mode indicator.** You see a toast ("NORMAL" / "INSERT") on each switch, but it fades after about a second. A permanent indicator would need the host's SolidJS runtime, which isn't available to externally installed plugins.
 
-**No cursor shape change.** The cursor stays a line in both modes, no block cursor in normal mode. opentui's renderer has `setCursorStyle` and it's exposed to plugins, so this is probably fixable. Haven't gotten to it yet.
-
 **No visual mode.** `v`, `V`, `Ctrl+v` do nothing. The plugin API doesn't expose cursor position or text selection, so there's no way to select a range.
 
 ## Install

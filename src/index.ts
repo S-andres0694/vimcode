@@ -40,6 +40,20 @@ const plugin: TuiPluginModule = {
       }
     }
 
+    // Override cursor style after each render frame. The Textarea's
+    // renderCursor() hardcodes "block" every frame, so we re-apply the
+    // mode-appropriate style via direct ANSI escape after the Zig
+    // renderer flushes each frame.
+    const cursorPostProcess = () => {
+      // DECSCUSR: \x1b[2 q = steady block, \x1b[6 q = steady bar
+      process.stdout.write(state.mode === "normal" ? "\x1b[2 q" : "\x1b[6 q")
+    }
+    api.renderer?.addPostProcessFn?.(cursorPostProcess)
+    api.lifecycle?.onDispose?.(() => {
+      api.renderer?.removePostProcessFn?.(cursorPostProcess)
+      process.stdout.write("\x1b[2 q")
+    })
+
     api.keymap.intercept(
       "key",
       (ctx) => {

@@ -8,6 +8,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-05-20
+
+### Added
+
+- Cursor shape changes with mode: block in normal mode, bar in insert mode. Uses DECSCUSR escape sequences via a post-render hook, bypassing the Textarea's hardcoded block cursor.
+
 ## [0.2.2] — 2026-05-20
 
 ### Fixed
@@ -88,7 +94,8 @@ First release. Modal editing for the OpenCode prompt.
 
 > `g` fires immediately as buffer-home instead of waiting for `gg`. The `yy` line tracker drifts on clicks and arrow keys. Visual mode and text objects aren't feasible without cursor position access.
 
-[Unreleased]: https://github.com/oribarilan/vimcode/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/oribarilan/vimcode/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/oribarilan/vimcode/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/oribarilan/vimcode/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/oribarilan/vimcode/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/oribarilan/vimcode/compare/v0.1.4...v0.2.0
