@@ -1,5 +1,5 @@
 // Keep in sync with package.json on each release.
-export const VERSION = "0.3.1"
+export const VERSION = "0.3.2"
 
 const PACKAGE_JSON_URL = "https://raw.githubusercontent.com/oribarilan/vimcode/main/package.json"
 
