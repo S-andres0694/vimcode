@@ -1,4 +1,4 @@
-export type Mode = "normal" | "insert" | "visual" | "visual-line"
+export type Mode = "normal" | "insert" | "visual"
 export type Operator = "d" | "c" | "y" | null
 
 export type Action =
@@ -8,7 +8,6 @@ export type Action =
   | { type: "yank"; text: string }
   | { type: "yankSelection" }
   | { type: "clearSelection" }
-  | { type: "selectLines" }
 
 export type HandlerResult = {
   consume: boolean
@@ -21,7 +20,6 @@ export type VimState = {
   count: number
   lineTracker: number
   yankRegister: string
-  visualAnchorLine: number
 }
 
 export type KeyEvent = {
@@ -81,7 +79,7 @@ const PASS: HandlerResult = { consume: false, actions: [] }
 const CONSUME: HandlerResult = { consume: true, actions: [] }
 
 export function createVimState(): VimState {
-  return { mode: "insert", pendingOp: null, count: 0, lineTracker: 0, yankRegister: "", visualAnchorLine: -1 }
+  return { mode: "insert", pendingOp: null, count: 0, lineTracker: 0, yankRegister: "" }
 }
 
 export function translateKey(ev: KeyEvent): string {
@@ -311,12 +309,6 @@ export function handleNormalKey(
     return { consume: true, actions: [{ type: "mode", mode: "visual" }] }
   }
 
-  if (key === "V") {
-    state.mode = "visual-line"
-    resetPending(state)
-    return { consume: true, actions: [{ type: "mode", mode: "visual-line" }, { type: "selectLines" }] }
-  }
-
   // Insert entries
   if (key === "i") {
     enterInsert(state, actions)
@@ -364,7 +356,6 @@ export function handleVisualKey(
   if (ev.ctrl) return PASS
 
   const actions: Action[] = []
-  const lineWise = state.mode === "visual-line"
 
   // Count accumulation
   if (/[1-9]/.test(key) || (key === "0" && state.count > 0)) {
@@ -372,8 +363,8 @@ export function handleVisualKey(
     return { consume: true, actions }
   }
 
-  // Exit: Escape always exits; v/V toggle off their own mode
-  if (ev.name === "escape" || key === "v" || key === "V") {
+  // Exit visual mode
+  if (ev.name === "escape" || key === "v") {
     exitVisual(state, actions)
     return { consume: true, actions }
   }
@@ -397,30 +388,17 @@ export function handleVisualKey(
     return { consume: true, actions }
   }
 
-  // Motions — line-wise moves cursor then recomputes full-line selection;
-  // character-wise extends the selection directly.
-  if (lineWise) {
-    if (key in MOTIONS) {
-      pushN(actions, MOTIONS[key], consumeCount(state))
-      actions.push({ type: "selectLines" })
-      return { consume: true, actions }
-    }
-    if (key === "g") {
-      actions.push({ type: "cmd", cmd: "input.buffer.home" })
-      actions.push({ type: "selectLines" })
-      state.count = 0
-      return { consume: true, actions }
-    }
-  } else {
-    if (key in SELECT_MOTIONS) {
-      pushN(actions, SELECT_MOTIONS[key], consumeCount(state))
-      return { consume: true, actions }
-    }
-    if (key === "g") {
-      actions.push({ type: "cmd", cmd: "input.select.buffer.home" })
-      state.count = 0
-      return { consume: true, actions }
-    }
+  // Motions extend selection
+  if (key in SELECT_MOTIONS) {
+    pushN(actions, SELECT_MOTIONS[key], consumeCount(state))
+    return { consume: true, actions }
+  }
+
+  // g = select to buffer home
+  if (key === "g") {
+    actions.push({ type: "cmd", cmd: "input.select.buffer.home" })
+    state.count = 0
+    return { consume: true, actions }
   }
 
   // Unbound key — consume to prevent typing
@@ -453,7 +431,6 @@ function enterNormal(state: VimState, actions: Action[]) {
 }
 
 function exitVisual(state: VimState, actions: Action[]) {
-  state.visualAnchorLine = -1
   actions.push({ type: "clearSelection" })
   enterNormal(state, actions)
 }
