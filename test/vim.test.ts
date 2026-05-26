@@ -236,12 +236,30 @@ describe("handleNormalKey — operators", () => {
     expect(r.actions.some((a) => a.type === "toast")).toBe(true)
   })
 
-  it("y+motion toasts unsupported", () => {
+  it("yw selects word forward and yanks", () => {
     handleNormalKey(state, "y", ev("y"), mockPrompt)
     const r = handleNormalKey(state, "w", ev("w"), mockPrompt)
-    const toasts = r.actions.filter((a) => a.type === "toast")
-    expect(toasts).toHaveLength(1)
-    expect((toasts[0] as Extract<Action, { type: "toast" }>).message).toContain("Only yy supported")
+    expect(cmds(r.actions)).toEqual(["input.select.word.forward"])
+    expect(r.actions.some((a) => a.type === "yankSelection")).toBe(true)
+  })
+
+  it("y$ selects to line end and yanks", () => {
+    handleNormalKey(state, "y", ev("y"), mockPrompt)
+    const r = handleNormalKey(state, "$", ev("4", { shift: true }), mockPrompt)
+    expect(cmds(r.actions)).toEqual(["input.select.line.end"])
+    expect(r.actions.some((a) => a.type === "yankSelection")).toBe(true)
+  })
+
+  it("y3w selects 3 words and yanks", () => {
+    handleNormalKey(state, "y", ev("y"), mockPrompt)
+    handleNormalKey(state, "3", ev("3"), mockPrompt)
+    const r = handleNormalKey(state, "w", ev("w"), mockPrompt)
+    expect(cmds(r.actions)).toEqual([
+      "input.select.word.forward",
+      "input.select.word.forward",
+      "input.select.word.forward",
+    ])
+    expect(r.actions.some((a) => a.type === "yankSelection")).toBe(true)
   })
 })
 

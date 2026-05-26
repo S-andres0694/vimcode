@@ -68,16 +68,25 @@ When the input is empty, `j`/`k` scroll through prompt history instead of moving
 
 ### Operators
 
+`d` (delete), `c` (change), and `y` (yank) combine with motions:
+
 | Combo | Action |
 |-------|--------|
-| `dd` | Delete line |
-| `dw` `db` `d$` `d0` | Delete to word/line boundary |
-| `dj` `dk` | Delete current + lines below/above |
-| `D` | Delete to end of line |
-| `cc` `cw` `cb` `c$` `c0` `C` | Same as d-equivalents, then insert mode |
-| `yy` | Yank (copy) current line |
+| `dd` `cc` `yy` | Operate on whole line |
+| `D` `C` | Delete/change to end of line |
+| `dw` `cw` `yw` | To next word |
+| `db` `cb` `yb` | To previous word |
+| `de` `ce` `ye` | To end of word |
+| `d$` `c$` `y$` | To end of line |
+| `d0` `c0` `y0` | To start of line |
+| `d^` `c^` `y^` | To start of line |
+| `dh` `ch` `yh` | Character left |
+| `dl` `cl` `yl` | Character right |
+| `dj` `cj` `yj` | Current + line below |
+| `dk` `ck` `yk` | Current + line above |
+| `yG` | To end of buffer (yank only) |
 
-Counts work too: `2dd` deletes 2 lines, `d3w` deletes 3 words.
+Counts work on both operator and motion: `2dd` deletes 2 lines, `d3w` deletes 3 words.
 
 ### Insert entries
 
@@ -126,7 +135,8 @@ All normal-mode motions work for extending the selection: `h` `j` `k` `l` `w` `b
 - `ciw`, `di"`, etc. (text objects) -- not yet implemented
 - `gg` -- single `g` goes to buffer start immediately, doesn't wait for a second keypress
 - `r` (replace char) -- not yet implemented
-- `yw`, `y$`, etc. -- only `yy` works, the rest need cursor tracking
+- `dG`, `cG` -- delete/change to buffer end not yet implemented (`yG` works)
+- `e` behaves the same as `w` -- the host doesn't expose a separate "end of word" command
 - `yy` accuracy -- line position is tracked with a counter that drifts on clicks and arrow keys
 
 ## Roadmap

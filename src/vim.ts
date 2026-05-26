@@ -245,7 +245,11 @@ export function handleNormalKey(
     const n = consumeCount(state)
 
     if (state.pendingOp === "y") {
-      actions.push({ type: "toast", message: "Only yy supported for now", duration: 1500 })
+      const selectCmd = SELECT_MOTIONS[key]
+      if (selectCmd) {
+        pushN(actions, selectCmd, n)
+        actions.push({ type: "yankSelection" })
+      }
       resetPending(state)
       return { consume: true, actions }
     }

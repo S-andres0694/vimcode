@@ -42,14 +42,17 @@ const plugin: TuiPluginModule = {
             api.renderer?.currentFocusedEditor?.insertText?.(action.text)
             break
           case "yankSelection": {
-            const editor = api.renderer?.currentFocusedEditor
-            const text = editor?.editorView?.getSelectedText?.() ?? ""
-            if (text) {
-              state.yankRegister = text
-              writeClipboard(text)
-              api.ui?.toast?.({ message: "yanked", variant: "info", duration: 1000 })
-            }
-            editor?.editorView?.resetSelection?.()
+            // Deferred so it runs after any preceding select commands
+            setTimeout(() => {
+              const editor = api.renderer?.currentFocusedEditor
+              const text = editor?.editorView?.getSelectedText?.() ?? ""
+              if (text) {
+                state.yankRegister = text
+                writeClipboard(text)
+                api.ui?.toast?.({ message: "yanked", variant: "info", duration: 1000 })
+              }
+              editor?.editorView?.resetSelection?.()
+            }, 0)
             break
           }
           case "clearSelection":

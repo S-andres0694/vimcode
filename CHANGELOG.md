@@ -8,6 +8,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added
+
+- Yank with motions: `yw`, `yb`, `ye`, `y$`, `y0`, `y^`, `yh`, `yl`, `yj`, `yk`, `yG`. Previously only `yy` worked.
+- Plugin init sanity test that catches crashes from hostile API shapes before release.
+- `just test` recipe in justfile.
+
+### Fixed
+
+- Plugin failed to load when `api.kv` didn't match the expected interface (e.g. object with no `.get` method). Broke all installs on some OpenCode versions.
+
+### Changed
+
+- README operators section rewritten to show `d`, `c`, and `y` side by side for each motion.
+- Noted that `e` and `w` behave identically (the host has no separate end-of-word command).
+
 ## [0.7.0] — 2026-05-26
 
 ### Added
