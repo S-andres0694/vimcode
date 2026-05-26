@@ -7,6 +7,8 @@ const plugin: TuiPluginModule = {
   id: "vimcode",
   tui: async (api, options) => {
     const state = createVimState()
+    const startMode = options?.startMode === "normal" ? "normal" : "insert"
+    state.mode = startMode
 
     const prompt = {
       getLine: (n: number) => getInputText().split("\n")[n] ?? "",
