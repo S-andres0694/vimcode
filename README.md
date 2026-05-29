@@ -137,6 +137,7 @@ All normal-mode motions work for extending the selection: `h` `j` `k` `l` `w` `b
 
 | Key | Action |
 |-----|--------|
+| `r{char}` | Replace character under cursor with `{char}` |
 | `x` | Delete character |
 | `u` | Undo |
 | `Ctrl+r` | Redo |
@@ -156,7 +157,6 @@ All normal-mode motions work for extending the selection: `h` `j` `k` `l` `w` `b
 - `V`, `Ctrl+v` - only character-wise visual mode (`v`) is supported, no line-wise or block
 - `ciw`, `di"`, etc. (text objects) - not yet implemented
 - `gg` - single `g` goes to buffer start immediately, doesn't wait for a second keypress
-- `r` (replace char) - not yet implemented
 - `dG`, `cG` - delete/change to buffer end not yet implemented (`yG` works)
 - `e` behaves the same as `w` - the host doesn't expose a separate "end of word" command
 - `yy` accuracy - line position is tracked with a counter that drifts on clicks and arrow keys

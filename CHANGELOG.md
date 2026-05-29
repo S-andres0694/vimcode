@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added
+
+- `r{char}` replaces the character under the cursor. Supports counts: `3ra` replaces 3 characters with `a`.
+
 ## [0.8.0] — 2026-05-26
 
 ### Added

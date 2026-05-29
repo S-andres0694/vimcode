@@ -341,6 +341,50 @@ describe("handleNormalKey — special keys", () => {
   });
 });
 
+// ── handleNormalKey — replace (r) ──────────────────────────
+
+describe("handleNormalKey — replace (r)", () => {
+  it("r sets pendingChar, consumes key, no commands", () => {
+    const r = handleNormalKey(state, "r", ev("r"), mockPrompt);
+    expect(r.consume).toBe(true);
+    expect(r.actions).toEqual([]);
+    expect(state.pendingChar).toBe("r");
+  });
+
+  it("r then a → input.delete + insertText('a'), stays normal", () => {
+    handleNormalKey(state, "r", ev("r"), mockPrompt);
+    const r = handleNormalKey(state, "a", ev("a"), mockPrompt);
+    expect(r.consume).toBe(true);
+    expect(cmds(r.actions)).toEqual(["input.delete"]);
+    expect(r.actions).toContainEqual({ type: "insertText", text: "a" });
+    expect(state.mode).toBe("normal");
+    expect(state.pendingChar).toBeNull();
+  });
+
+  it("3ra → 3x input.delete + insertText('aaa')", () => {
+    handleNormalKey(state, "3", ev("3"), mockPrompt);
+    handleNormalKey(state, "r", ev("r"), mockPrompt);
+    const r = handleNormalKey(state, "a", ev("a"), mockPrompt);
+    expect(cmds(r.actions)).toEqual(["input.delete", "input.delete", "input.delete"]);
+    expect(r.actions).toContainEqual({ type: "insertText", text: "aaa" });
+  });
+
+  it("r then escape → cancels, no commands", () => {
+    handleNormalKey(state, "r", ev("r"), mockPrompt);
+    const r = handleNormalKey(state, "escape", ev("escape"), mockPrompt);
+    expect(state.pendingChar).toBeNull();
+    expect(cmds(r.actions)).toEqual([]);
+  });
+
+  it("r then digit → replaces with digit, not count", () => {
+    handleNormalKey(state, "r", ev("r"), mockPrompt);
+    const r = handleNormalKey(state, "5", ev("5"), mockPrompt);
+    expect(cmds(r.actions)).toEqual(["input.delete"]);
+    expect(r.actions).toContainEqual({ type: "insertText", text: "5" });
+    expect(state.count).toBe(0);
+  });
+});
+
 // ── handleNormalKey — insert entries ────────────────────────
 
 describe("handleNormalKey — insert entries", () => {

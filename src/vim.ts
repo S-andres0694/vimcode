@@ -18,6 +18,7 @@ export type HandlerResult = {
 export type VimState = {
   mode: Mode;
   pendingOp: Operator;
+  pendingChar: "r" | null;
   count: number;
   lineTracker: number;
   yankRegister: string;
@@ -80,7 +81,7 @@ const PASS: HandlerResult = { consume: false, actions: [] };
 const _CONSUME: HandlerResult = { consume: true, actions: [] };
 
 export function createVimState(): VimState {
-  return { mode: "insert", pendingOp: null, count: 0, lineTracker: 0, yankRegister: "" };
+  return { mode: "insert", pendingOp: null, pendingChar: null, count: 0, lineTracker: 0, yankRegister: "" };
 }
 
 export function translateKey(ev: KeyEvent): string {
@@ -126,6 +127,16 @@ export function handleNormalKey(state: VimState, key: string, ev: KeyEvent, prom
   if (ev.name === "escape") {
     resetPending(state);
     return PASS;
+  }
+
+  // Pending character argument (r{char})
+  if (state.pendingChar === "r") {
+    const n = consumeCount(state);
+    const actions: Action[] = [];
+    pushN(actions, "input.delete", n);
+    actions.push({ type: "insertText", text: key.repeat(n) });
+    state.pendingChar = null;
+    return { consume: true, actions };
   }
 
   if (ev.name === "tab") return PASS;
@@ -301,6 +312,11 @@ export function handleNormalKey(state: VimState, key: string, ev: KeyEvent, prom
     return { consume: true, actions };
   }
 
+  if (key === "r") {
+    state.pendingChar = "r";
+    return { consume: true, actions };
+  }
+
   if (key === "u") {
     actions.push({ type: "cmd", cmd: "input.undo" });
     resetPending(state);
@@ -410,6 +426,7 @@ export function handleVisualKey(state: VimState, key: string, ev: KeyEvent): Han
 
 function resetPending(state: VimState) {
   state.pendingOp = null;
+  state.pendingChar = null;
   state.count = 0;
 }
 

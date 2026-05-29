@@ -25,12 +25,12 @@ vimcode is a TUI plugin for [OpenCode](https://opencode.ai). Before working on i
 
 ```
 src/
-  index.ts       (118 lines)  Plugin entry: intercept registration, action application
-  vim.ts         (457 lines)  Pure vim engine: state, handlers, command tables, types
-  clipboard.ts   (28 lines)   writeClipboard() — cross-platform (pbcopy/xclip/xsel/wl-copy/clip.exe)
-  version.ts     (32 lines)   Version constant, GitHub update check (cached daily)
+  index.ts       (134 lines)  Plugin entry: intercept registration, action application
+  vim.ts         (469 lines)  Pure vim engine: state, handlers, command tables, types
+  clipboard.ts   (19 lines)   writeClipboard() — cross-platform (pbcopy/xclip/xsel/wl-copy/clip.exe)
+  version.ts     (46 lines)   Version constant, GitHub update check (cached daily)
 test/
-  vim.test.ts    (620 lines)  Characterization tests for all key handling branches
+  vim.test.ts    (671 lines)  Characterization tests for all key handling branches
 ```
 
 **Data flow:**
@@ -115,3 +115,11 @@ The `dev-tui.json` config is picked up only by `just dev`. Running `opencode` no
 **TypeScript strictness.** `strict: true` in tsconfig. No `any` in `vim.ts` or `test/`. The `api` parameter in `index.ts` is typed as `any` because the plugin types come from peer deps that may not be installed locally — that's the one acceptable use.
 
 **Cross-platform.** All code must work on macOS, Linux, and Windows. No platform-specific assumptions without a runtime `process.platform` check and fallbacks for other platforms.
+
+## Task Completion Checklist
+
+After finishing any task, check whether these need updating:
+
+- **README.md** — New keybinding? Add it to the tables. Fixed a known gap? Remove it from "Known gaps".
+- **CHANGELOG.md** — Add the change under `[Unreleased]`. Follow Keep a Changelog format.
+- **AGENTS.md** — Line counts in Architecture section, known limitations, or new patterns worth documenting.
