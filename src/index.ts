@@ -11,6 +11,7 @@ import {
   matchesLeader,
   type ParsedLeader,
   parseLeaderKey,
+  toggleVimMode,
   translateKey,
 } from "./vim";
 
@@ -31,6 +32,10 @@ const plugin: TuiPluginModule = {
         : options?.modeToast === false
           ? "none"
           : "toast";
+
+    // Load persisted disabled state
+    const persistedDisabled = (await api.kv?.get?.("vimcode.disabled")) as boolean | undefined;
+    state.disabled = persistedDisabled ?? false;
 
     // Track whether the previous key was the leader, so the follow-up
     // key also passes through to OpenCode's leader system.
@@ -85,11 +90,19 @@ const plugin: TuiPluginModule = {
           case "mode":
             if (modeIndicator === "toast") {
               const label = action.mode === "(insert)" ? action.mode : action.mode.toUpperCase();
-              api.ui?.toast?.({ message: label, variant: "info", duration: 800 });
+              api.ui?.toast?.({
+                message: label,
+                variant: "info",
+                duration: 800,
+              });
             }
             break;
           case "toast":
-            api.ui?.toast?.({ message: action.message, variant: "info", duration: action.duration ?? 2000 });
+            api.ui?.toast?.({
+              message: action.message,
+              variant: "info",
+              duration: action.duration ?? 2000,
+            });
             break;
           case "yank":
             writeClipboard(action.text);
@@ -105,7 +118,11 @@ const plugin: TuiPluginModule = {
               if (text) {
                 state.yankRegister = text;
                 writeClipboard(text);
-                api.ui?.toast?.({ message: "yanked", variant: "info", duration: 1000 });
+                api.ui?.toast?.({
+                  message: "yanked",
+                  variant: "info",
+                  duration: 1000,
+                });
               }
               editor?.editorView?.resetSelection?.();
             }, 0);
@@ -118,7 +135,10 @@ const plugin: TuiPluginModule = {
             const editor = api.renderer?.currentFocusedEditor;
             const eb = editor?.editBuffer;
             if (eb?.deleteRange) {
-              undoSnapshot = { text: editor.plainText ?? "", cursor: editor.cursorOffset ?? 0 };
+              undoSnapshot = {
+                text: editor.plainText ?? "",
+                cursor: editor.cursorOffset ?? 0,
+              };
               const text = editor.plainText ?? "";
               const [sl, sc] = offsetToLineCol(text, action.start);
               const [el, ec] = offsetToLineCol(text, action.end + 1);
@@ -157,7 +177,10 @@ const plugin: TuiPluginModule = {
     function syncCursorStyle() {
       const editor = api.renderer?.currentFocusedEditor;
       if (!editor) return;
-      editor.cursorStyle = { style: state.mode === "insert" ? "line" : "block", blinking: true };
+      editor.cursorStyle = {
+        style: state.mode === "insert" ? "line" : "block",
+        blinking: true,
+      };
     }
 
     // The Textarea resets cursorStyle during rendering, so re-apply on a
@@ -187,10 +210,33 @@ const plugin: TuiPluginModule = {
       { ...quit, title: "wq", value: "vimcode.wq" },
     ]);
 
+    // Register the /vim toggle command via registerLayer so it appears
+    // as a slash command in the command palette.
+    api.keymap.registerLayer?.({
+      commands: [
+        {
+          name: "vimcode.vim",
+          title: "/vim",
+          category: "Vim",
+          namespace: "palette",
+          desc: "Toggle vim mode on/off",
+          slashName: "vim",
+          run: async () => {
+            const result = toggleVimMode(state);
+            await api.kv?.set?.("vimcode.disabled", state.disabled);
+            applyActions(result.actions);
+          },
+        },
+      ],
+    });
+
     api.keymap.intercept(
       "key",
       (ctx) => {
         if (ctx.event.eventType === "release") return;
+
+        // If vim mode is disabled, pass all keys through unmodified.
+        if (state.disabled) return;
 
         // Pass through when any overlay owns the keyboard: dialogs (command
         // palette, session list, etc.), question prompts, or permission prompts.

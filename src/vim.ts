@@ -26,6 +26,7 @@ export type VimState = {
   count: number;
   yankRegister: string;
   oneShotNormal: boolean;
+  disabled: boolean;
 };
 
 export type KeyEvent = {
@@ -94,7 +95,36 @@ const PASS: HandlerResult = { consume: false, actions: [] };
 const _CONSUME: HandlerResult = { consume: true, actions: [] };
 
 export function createVimState(): VimState {
-  return { mode: "insert", pendingOp: null, pendingChar: null, count: 0, yankRegister: "", oneShotNormal: false };
+  return {
+    mode: "insert",
+    pendingOp: null,
+    pendingChar: null,
+    count: 0,
+    yankRegister: "",
+    oneShotNormal: false,
+    disabled: false,
+  };
+}
+
+export function toggleVimMode(state: VimState): HandlerResult {
+  state.disabled = !state.disabled;
+  if (state.disabled) {
+    // Reset to clean insert mode so cursor style updates and no stale
+    // pending state carries over when re-enabled.
+    state.mode = "insert";
+    state.pendingOp = null;
+    state.pendingChar = null;
+    state.count = 0;
+    state.oneShotNormal = false;
+    return {
+      consume: true,
+      actions: [
+        { type: "toast", message: "Vim mode disabled" },
+        { type: "mode", mode: "insert" },
+      ],
+    };
+  }
+  return { consume: true, actions: [{ type: "toast", message: "Vim mode enabled" }] };
 }
 
 export function endOfWord(text: string, offset: number, count = 1): number {
