@@ -36,6 +36,9 @@ const plugin: TuiPluginModule = {
     // Load persisted disabled state
     const persistedDisabled = (await api.kv?.get?.("vimcode.disabled")) as boolean | undefined;
     state.disabled = persistedDisabled ?? false;
+    if (state.disabled) {
+      api.ui?.toast?.({ message: "Vim mode disabled (use /vim to re-enable)", variant: "info", duration: 3000 });
+    }
 
     // Track whether the previous key was the leader, so the follow-up
     // key also passes through to OpenCode's leader system.
@@ -200,44 +203,24 @@ const plugin: TuiPluginModule = {
     // Register all commands via registerLayer (migrated from the deprecated
     // api.command?.register API). Commands appear in the command palette and
     // are accessible as slash commands.
+    const exitRun = async () => {
+      setTimeout(() => api.keymap.dispatchCommand("app.exit"), 0);
+    };
+    const exitCommands = ["q", "quit", "wq"].map((cmd) => ({
+      name: `vimcode.${cmd}`,
+      title: `:${cmd}`,
+      category: "Vim",
+      namespace: "palette",
+      desc: cmd === "wq" ? "Exit OpenCode (write and quit)" : "Exit OpenCode",
+      slashName: cmd,
+      run: exitRun,
+    }));
     api.keymap.registerLayer?.({
       commands: [
-        {
-          name: "vimcode.q",
-          title: ":q",
-          category: "Vim",
-          namespace: "palette",
-          desc: "Exit OpenCode",
-          slashName: "q",
-          run: async () => {
-            setTimeout(() => api.keymap.dispatchCommand("app.exit"), 0);
-          },
-        },
-        {
-          name: "vimcode.quit",
-          title: ":quit",
-          category: "Vim",
-          namespace: "palette",
-          desc: "Exit OpenCode",
-          slashName: "quit",
-          run: async () => {
-            setTimeout(() => api.keymap.dispatchCommand("app.exit"), 0);
-          },
-        },
-        {
-          name: "vimcode.wq",
-          title: ":wq",
-          category: "Vim",
-          namespace: "palette",
-          desc: "Exit OpenCode (write and quit)",
-          slashName: "wq",
-          run: async () => {
-            setTimeout(() => api.keymap.dispatchCommand("app.exit"), 0);
-          },
-        },
+        ...exitCommands,
         {
           name: "vimcode.vim",
-          title: "/vim",
+          title: ":vim",
           category: "Vim",
           namespace: "palette",
           desc: "Toggle vim mode on/off",
